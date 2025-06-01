@@ -92,6 +92,15 @@ def enrich_and_store(**context):
         except Exception as e:
             logging.error(f"Error enriching domain {domain}: {e}", exc_info=True)
 
+def print_companies():
+    import sqlite3
+    conn = sqlite3.connect("/opt/airflow/db/companies.db")
+    cursor = conn.cursor()
+    rows = cursor.execute("SELECT * FROM companies").fetchall()
+    print("\n[DEBUG] Existing Companies in DB:")
+    for row in rows:
+        print(row)
+    conn.close()
 
 default_args = {
     "start_date": datetime(2024, 1, 1),
@@ -123,4 +132,10 @@ with DAG(
         provide_context=True,
     )
 
-    ocr_task >> domain_extraction >> enrich_store
+    print_db_task = PythonOperator(
+        task_id='print_companies',
+        python_callable=print_companies,
+        dag=dag,
+    )
+
+    ocr_task >> domain_extraction >> enrich_store >> print_db_task

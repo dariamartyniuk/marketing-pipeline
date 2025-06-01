@@ -27,31 +27,54 @@ class Offer(Base):
     company = relationship("Company", back_populates="offers")
 
 def init_db():
-    engine = create_engine("postgresql+psycopg2://marketing:marketing@marketing_db:5432/marketing_data")
-    Base.metadata.create_all(engine)
-    Session = sessionmaker(bind=engine)
-    return Session()
+    import sqlite3
+    conn = sqlite3.connect("/opt/airflow/db/companies.db")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS companies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            domain TEXT UNIQUE,
+            name TEXT,
+            description TEXT,
+            industry TEXT,
+            location TEXT,
+            ownership TEXT
+        );
+    """)
+    return conn
 
-def insert_or_update_company(session, enriched_data):
-    domain = enriched_data.get("domain")
-    company = session.query(Company).filter_by(domain=domain).first()
 
-    if not company:
-        company = Company(
-            name=enriched_data.get("name"),
-            domain=domain,
-            description=enriched_data.get("description"),
-            industry=enriched_data.get("industry"),
-            hq=enriched_data.get("hq"),
-            logo_url=enriched_data.get("logo"),
+def insert_or_update_company(db, company_data):
+    existing = db.execute(
+        "SELECT * FROM companies WHERE domain = ?", (company_data["domain"],)
+    ).fetchone()
+
+    if existing:
+        db.execute(
+            """UPDATE companies
+               SET name = ?, description = ?, industry = ?, location = ?, ownership = ?
+               WHERE domain = ?""",
+            (
+                company_data["name"],
+                company_data["description"],
+                company_data["industry"],
+                company_data["location"],
+                company_data["ownership"],
+                company_data["domain"],
+            ),
         )
-        session.add(company)
+    else:
+        db.execute(
+            """INSERT INTO companies (domain, name, description, industry, location, ownership)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (
+                company_data["domain"],
+                company_data["name"],
+                company_data["description"],
+                company_data["industry"],
+                company_data["location"],
+                company_data["ownership"],
+            ),
+        )
 
-    offer = Offer(
-        filename=enriched_data.get("source_file"),
-        text_excerpt=enriched_data.get("ocr_text", ""),
-        company=company
-    )
-    session.add(offer)
+    db.commit()
 
-    session.commit()
