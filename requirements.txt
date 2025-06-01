@@ -1,0 +1,18 @@
+apache-airflow==2.9.1
+
+# OCR
+easyocr==1.7.1
+torch==2.7.0
+opencv-python-headless==4.9.0.80
+
+# Web requests & parsing
+requests==2.31.0
+beautifulsoup4==4.12.3
+
+# Database
+SQLAlchemy==1.4.49
+psycopg2-binary==2.9.9
+
+# Utility
+imageio[pyav]
+pandas==2.2.2
